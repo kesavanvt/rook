@@ -257,6 +257,8 @@ func (c *ClusterController) initializeCluster(cluster *cluster, clusterObj *ceph
 	// Start the monitoring if not already started
 	c.configureCephMonitoring(cluster, cephUser)
 
+	c.UpdateCephStorage(c.client, c.namespacedName)
+
 	return nil
 }
 

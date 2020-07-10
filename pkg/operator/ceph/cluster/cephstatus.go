@@ -195,3 +195,31 @@ func (c *ClusterController) updateClusterCephVersion(image string, cephVersion c
 		return
 	}
 }
+
+func (c *ClusterController) UpdateCephStorage(client client.Client, name types.NamespacedName) {
+	cephCluster := &cephv1.CephCluster{}
+	var devices []string
+	err := c.client.Get(context.TODO(), c.namespacedName, cephCluster)
+	if err != nil {
+		if kerrors.IsNotFound(err) {
+			logger.Debug("CephCluster resource not found. Ignoring since object must be deleted.")
+			return
+		}
+		logger.Errorf("failed to retrieve ceph cluster %q to update ceph Storage. %v", c.namespacedName.Name, err)
+		return
+	}
+	cephClusterStorage := cephv1.CephStorage{}
+	devices, err = cephclient.ListDeviceclass(c.context, c.namespacedName.Namespace)
+	if err != nil {
+		logger.Errorf("failed to get storage device classes. %v", err)
+		return
+	}
+	for _, device := range devices {
+		cephClusterStorage.DeviceClasses = append(cephClusterStorage.DeviceClasses, cephv1.DeviceClasses{Name: device})
+	}
+	cephCluster.Status.CephStorage = &cephClusterStorage
+	if err := opcontroller.UpdateStatus(c.client, cephCluster); err != nil {
+		logger.Errorf("failed to update cluster %q Storage. %v", c.namespacedName.Name, err)
+		return
+	}
+}
